@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    {% include 'includes/static_data.html' %}
+    <title>{% block title %}--404--{% endblock %}</title>
+  </head>
+  <body>
+    <header>
+      {% include 'includes/header.html' %}
+    </header>
+    <main>
+      <div class="container py-5">
+        {% block content %}{% endblock %}
+        {% include 'posts/includes/paginator.html' %}
+      </div>
+    </main>
+      {% include 'includes/footer.html' %}
+  </body>
+</html>

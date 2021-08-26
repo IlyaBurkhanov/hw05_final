@@ -1,0 +1,8 @@
+{% extends "includes/auth_base.html" %}
+{% block title %}Войти{% endblock %}
+{% block header %}Войти на сайт{% endblock %}
+{% block content %}
+{% load user_filters %}
+{% setdict button="Войти" cls="form-group row my-3" changepass=True as dict %}
+{% include "includes/auth_forms.html" with dict=dict %}
+{% endblock %}

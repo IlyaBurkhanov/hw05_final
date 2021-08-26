@@ -1,0 +1,8 @@
+{% extends "includes/auth_base.html" %}
+{% block title %}Зарегистрироваться{% endblock %}
+{% block header %}Зарегистрироваться{% endblock %}
+{% block content %}
+{% load user_filters %}
+{% setdict button="Зарегистрироваться" cls="form-group row my-3 p-3" as dict %}
+{% include "includes/auth_forms.html" with dict=dict %}
+{% endblock %}
