@@ -219,7 +219,6 @@ class TaskPagesTests(TestCase):
         Шаблон контекста.
         Тестим: group/author/author_name/post/page_obj/title/headline.
         """
-        # Post.objects.first().delete()
         for name, context in context_dict.items():
             response = self.authorized_client.get(self.use_urls[name])
             response_context = response.context
