@@ -29,7 +29,7 @@ def group_posts(request, slug):
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
     title = 'Записи сообщества ' + str(group)
     context = {
-        'page_obj': page_obj, #page_obj
+        'page_obj': page_obj,
         'title': title,
         'group': group
     }
@@ -70,7 +70,7 @@ def post_create(request):
         post = form.save(commit=False)
         post.author = request.user
         post.save()
-        return redirect('posts:profile', username=request.user)  # main
+        return redirect('posts:profile', username=request.user)
     return render(request, 'posts/create_post.html', {'form': form})
 
 
