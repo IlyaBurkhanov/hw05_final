@@ -1,9 +1,11 @@
 import random
+import time
 
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.core.cache import cache
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from ..models import Group, Post
@@ -129,6 +131,13 @@ class TaskPagesTests(TestCase):
 
         self.use_urls = test_func.get_use_urls(self, view_test)
 
+        # Для теста кэша
+        self.cache_text = 'QWERTYUIOPASDFGH'
+        self.cache_post = Post.objects.create(
+            group=self.group,
+            author=self.user,
+            text=self.cache_text)
+
     def test_template(self):
         """Тест темплейтов."""
         for name, reverse_name in self.use_urls.items():
@@ -138,6 +147,7 @@ class TaskPagesTests(TestCase):
 
     def test_paginator(self):
         """Тест пагинатора."""
+        Post.objects.first().delete()
         for name, cnt_arg in has_paginator.items():
             cnt = getattr(self, cnt_arg)
             first_page_cnt = min(page_count, cnt)
@@ -205,6 +215,7 @@ class TaskPagesTests(TestCase):
         Шаблон контекста.
         Тестим: group/author/author_name/post/page_obj/title/headline.
         """
+        Post.objects.first().delete()
         for name, context in context_dict.items():
             response = self.authorized_client.get(self.use_urls[name])
             response_context = response.context
@@ -251,26 +262,18 @@ class TaskPagesTests(TestCase):
                     form_field = response.context.get('form').fields.get(value)
                     self.assertIsInstance(form_field, expected)
 
-    def test_cash(self):
-        """Проверка работы кэша."""
+    def test_cash_3(self):
+        def response_page():
+            response = self.authorized_client.get(
+                reverse('posts:main')).content.decode('UTF-8')
+            return response
 
-        def get_text():
-            response_use = self.authorized_client.get(self.use_urls[cache_url])
-            return response_use.context['page_obj'][0].text
-
-        def post_create(text_create):
-            return Post.objects.create(text=text_create,
-                                       author=self.user,
-                                       group=self.group)
-
-        post_create('Старый текст до кэша')
-        del_post = post_create('Новый текст при работе кэша')
-        new_text = get_text()
-        del_post.delete()
-        old_text = get_text()
-        with self.subTest(url=cache_url):
-            self.assertEqual(old_text, new_text,
-                             msg='Кэш не работает')
+        cache.clear()
+        self.assertIn(self.cache_text, response_page())
+        self.cache_post.delete()
+        self.assertIn(self.cache_text, response_page())
+        cache.clear()
+        self.assertNotIn(self.cache_text, response_page())
 
     def test_following(self):
         """Тест проверки механизма подписок."""

@@ -29,7 +29,7 @@ def group_posts(request, slug):
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
     title = 'Записи сообщества ' + str(group)
     context = {
-        'page_obj': page_obj,
+        'page_obj': page_obj, #page_obj
         'title': title,
         'group': group
     }
@@ -70,7 +70,7 @@ def post_create(request):
         post = form.save(commit=False)
         post.author = request.user
         post.save()
-        return redirect('posts:profile', username=request.user)
+        return redirect('posts:profile', username=request.user)  # main
     return render(request, 'posts/create_post.html', {'form': form})
 
 
@@ -107,7 +107,7 @@ def follow_index(request):
     # информация о текущем пользователе доступна в переменной request.user
     posts = Post.objects.filter(
         author__in=[
-            x.author for x in Follow.objects.filter(user_id=request.user)])
+            x.author for x in Follow.objects.filter(user=request.user)])
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
     title = 'Авторы на которых вы подписаны'
     context = {
@@ -120,9 +120,10 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    Follow.objects.get_or_create(
-        user=request.user,
-        author=User.objects.get(username=username))
+    if request.user.username != username:
+        Follow.objects.get_or_create(
+            user=request.user,
+            author=User.objects.get(username=username))
     return redirect('posts:follow_index')
 
 
