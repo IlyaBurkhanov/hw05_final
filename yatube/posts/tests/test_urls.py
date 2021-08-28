@@ -168,9 +168,3 @@ class TaskURLTests(TestCase):
                         self.authorized_client1).get(self.use_urls[url])
                 )
             self.assertTemplateUsed(response, val['template'])
-
-
-    # def test_pagin_test(self):
-    #     url_use1 = 'posts:group-posts'
-    #     response = self.authorized_client2.get(self.use_urls[url_use1])
-    #     print(response.context)
