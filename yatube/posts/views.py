@@ -40,7 +40,9 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.post_author.all()
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
-    following = request.user in [x.user for x in author.following.all()]
+    # Так кода меньше: request.user in [x.user for x in author.following.all()]
+    following = Follow.objects.filter(user=request.user.id,
+                                      author=author.id).exists()
     context = {
         'page_obj': page_obj,
         'author': author,
@@ -105,9 +107,7 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     # информация о текущем пользователе доступна в переменной request.user
-    posts = Post.objects.filter(
-        author__in=[
-            x.author for x in Follow.objects.filter(user=request.user)])
+    posts = Post.objects.filter(author__following__user=request.user)
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
     title = 'Авторы на которых вы подписаны'
     context = {
@@ -120,7 +120,7 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    if request.user.username != username:
+    if request.user != username:
         Follow.objects.get_or_create(
             user=request.user,
             author=User.objects.get(username=username))
@@ -130,7 +130,7 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     follow = Follow.objects.get(user=request.user,
-                                author=User.objects.get(username=username))
+                                author__username=username)
     if follow:
         follow.delete()
     return redirect('posts:follow_index')

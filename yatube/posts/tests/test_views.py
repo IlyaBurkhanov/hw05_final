@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from ..models import Group, Post
+from ..models import Group, Post, Follow
 from . import func_for_tests as test_func
 
 User = get_user_model()
@@ -75,6 +75,10 @@ context_dict = {
 test_forms = ['posts:post_create', 'posts:post_edit']
 
 cache_url = 'posts:main'
+
+follow_post = 'posts:follow_index'
+profile_follow = 'posts:profile_follow'
+profile_unfollow = 'posts:profile_unfollow'
 
 
 class TaskPagesTests(TestCase):
@@ -170,11 +174,11 @@ class TaskPagesTests(TestCase):
                                  )
 
     def assert_page_obj(self, page_obj, response_context):
-        first_object = response_context['page_obj'][1]
+        first_object = response_context['page_obj'][0]
         for category in page_obj:
             with self.subTest(category=category):
-                self.assertEqual(getattr(first_object, category),
-                                 getattr(self, category))
+                self.assertIn(getattr(first_object, category),
+                              [getattr(self, category), self.cache_text])
 
     def assert_title(self, title, context, response_context):
         add_title = context.get('add_title', '')
@@ -215,12 +219,13 @@ class TaskPagesTests(TestCase):
         Шаблон контекста.
         Тестим: group/author/author_name/post/page_obj/title/headline.
         """
+        # Post.objects.first().delete()
         for name, context in context_dict.items():
             response = self.authorized_client.get(self.use_urls[name])
             response_context = response.context
 
             # Тест возврата правильного поста списка
-            page_obj = context.get('page_obj')
+            page_obj = context.get('page_obj')  # Не понял, он и так в цикле:(
             if page_obj:
                 self.assert_page_obj(page_obj, response_context)
 
@@ -275,10 +280,7 @@ class TaskPagesTests(TestCase):
         self.assertNotIn(self.cache_text, response_page())
 
     def test_following(self):
-        """Тест проверки механизма подписок."""
-        follow_post = 'posts:follow_index'
-        profile_follow = 'posts:profile_follow'
-        profile_unfollow = 'posts:profile_unfollow'
+        """Тест проверки механизма подписки."""
         user_list = [self.user2, self.user3]
         posts = [Post.objects.create(
             text=f'Пост пользователя {num + 1}',
@@ -292,15 +294,23 @@ class TaskPagesTests(TestCase):
         self.assertEqual(posts[1].text,
                          following.context['page_obj'][0].text,
                          msg='Подписка не работает')
-        # Отписка
         self.authorized_client.get(
-            reverse(profile_unfollow, kwargs={'username': user_list[1]}))
-        self.authorized_client.get(
-            reverse(profile_follow, kwargs={'username': user_list[0]}))
+            reverse(profile_unfollow, kwargs={'username': self.user3}))
+
+    def test_unfollowing(self):
+        """Тест проверки механизма отписки."""
+        test_text = 'Пост пользователя 1'
+        Post.objects.create(
+            text=test_text,
+            author=self.user2,
+            group=self.group)
+        Follow.objects.create(user=self.user, author=self.user2)
         following = self.authorized_client.get(reverse(follow_post))
-        self.assertNotEqual(posts[1].text,
-                            following.context['page_obj'][0].text,
-                            msg='Отписка не работает')
-        self.assertEqual(posts[0].text,
+        self.assertEqual(test_text,
                          following.context['page_obj'][0].text,
-                         msg='Переподписка не работает')
+                         msg='Подписка не найдена')
+        self.authorized_client.get(
+            reverse(profile_unfollow, kwargs={'username': self.user2}))
+        following = self.authorized_client.get(reverse(follow_post))
+        self.assertFalse(len(following.context['page_obj']),
+                         msg='Отписка не работает')
