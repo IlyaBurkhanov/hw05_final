@@ -258,15 +258,15 @@ class TaskPagesTests(TestCase):
     def test_cash(self):
         def response_page():
             response = self.authorized_client.get(
-                reverse('posts:main')).content.decode('UTF-8')
+                reverse('posts:main'))
             return response
 
         cache.clear()
-        self.assertIn(self.cache_text, response_page())
+        self.assertContains(response_page(), self.cache_text)
         self.cache_post.delete()
-        self.assertIn(self.cache_text, response_page())
+        self.assertContains(response_page(), self.cache_text)
         cache.clear()
-        self.assertNotIn(self.cache_text, response_page())
+        self.assertNotContains(response_page(), self.cache_text)
 
     def test_following(self):
         """Тест проверки механизма подписки."""
