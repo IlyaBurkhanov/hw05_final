@@ -180,7 +180,7 @@ class TaskPagesTests(TestCase):
                 self.assertIn(getattr(first_object, category),
                               [getattr(self, category), self.cache_text])
 
-    def assert_title(self, title, context, response_context):
+    def assert_title(self, title, response_context, context):
         add_title = context.get('add_title', '')
         if add_title:
             title += str(getattr(self, add_title))
@@ -209,47 +209,37 @@ class TaskPagesTests(TestCase):
                 self.assertEqual(getattr(response_post, atr),
                                  getattr(self.post, atr))
 
-    def assert_form_text(self, response_context, name):
+    def assert_form_text(self, _, response_context):
         response_text = response_context['form']['text'].value()
-        with self.subTest(form_atr=name):
-            self.assertIn(response_text, [self.text, self.cache_text])
+        self.assertIn(response_text, [self.text, self.cache_text])
 
     def test_context(self):
         """
         Шаблон контекста.
         Тестим: group/author/author_name/post/page_obj/title/headline.
         """
+        func_dict = {'page_obj': {'func': self.assert_page_obj},
+                     'title': {'func': self.assert_title,
+                               'context': True},
+                     'headline': {'func': self.assert_headline},
+                     'post': {'func': self.assert_post},
+                     'form': {'func': self.assert_form_text}
+                     }
         for name, context in context_dict.items():
             response = self.authorized_client.get(self.use_urls[name])
             response_context = response.context
 
-            # Тест возврата правильного поста списка
-            page_obj = context.get('page_obj')  # Не понял, он и так в цикле:(
-            if page_obj:
-                self.assert_page_obj(page_obj, response_context)
-
-            # Тест возврата правильного title
-            title = context.get('title')
-            if title:
-                self.assert_title(title, context, response_context)
-
-            # Тест возврата правильного headline
-            headline = context.get('headline')
-            if headline:
-                self.assert_headline(headline, response_context)
-
             # Тест возврата правильных объектов
             self.assert_objects_key(context, response_context)
 
-            # Тест возврата правильного поста
-            post = context.get('post')
-            if post:
-                self.assert_post(post, response_context)
-
-            # Тест возврата сохраненного текста в посте
-            form_text = context.get('form')
-            if form_text:
-                self.assert_form_text(response_context, name)
+            for obj in func_dict.keys():  # Так?
+                inspect_obj = context.get(obj)
+                if inspect_obj:
+                    func_dict[obj]['func'](
+                        inspect_obj,
+                        response_context,
+                        * [context] if func_dict[obj].get('context') else []
+                    )
 
     def test_form(self):
         """Шаблон сформирован с правильной формой."""
