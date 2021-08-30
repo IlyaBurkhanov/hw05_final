@@ -40,7 +40,6 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.post_author.all()
     page_obj = Paginator(posts, page_count).get_page(request.GET.get('page'))
-    # Так кода меньше: request.user in [x.user for x in author.following.all()]
     following = Follow.objects.filter(user=request.user.id,
                                       author=author.id).exists()
     context = {
@@ -120,7 +119,7 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    our_user = User.objects.get(username=username)
+    our_user = get_object_or_404(User, username=username)
     if request.user != our_user:
         Follow.objects.get_or_create(
             user=request.user,
@@ -130,8 +129,8 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    follow = Follow.objects.get(user=request.user,
-                                author__username=username)
+    follow = get_object_or_404(Follow, user=request.user,
+                               author__username=username)
     if follow:
         follow.delete()
     return redirect('posts:follow_index')
